@@ -1,0 +1,11 @@
+# Core BEMT dependencies
+numpy>=1.24
+scipy>=1.10
+pyyaml>=6.0
+
+# Optional: required only for pipeline.py (AGRC_Surrogate integration)
+# tensorflow>=2.16
+# keras>=3.0
+# joblib>=1.2
+# scikit-learn>=1.0
+# pandas>=1.5

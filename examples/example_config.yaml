@@ -1,0 +1,67 @@
+# BEMT run configuration — UH-60 Black Hawk baseline
+# Run with: python main.py --input examples/example_config.yaml
+
+# ── Rotor geometry ────────────────────────────────────────────────────────────
+rotor:
+  radius_ft:    16.4
+  n_blades:     3
+  n_rotors:     1
+  root_cutout:  0.19     # r/R
+  tip_speed_fps: 550.0
+  tip_loss:     true     # Prandtl tip-loss correction
+
+# ── Atmosphere ────────────────────────────────────────────────────────────────
+atmosphere:
+  altitude_ft: 0.0
+  T_today_F:   59.0      # ISA sea level
+
+# ── Blade geometry ────────────────────────────────────────────────────────────
+blade:
+  # Spanwise stations (r/R), chord (ft), and twist (deg) — all same length.
+  # The solver interpolates these onto its internal grid.
+  r_stations: [0.19, 0.30, 0.45, 0.60, 0.75, 0.90, 1.00]
+  chord_ft:   [1.08, 1.08, 1.08, 1.08, 1.08, 1.08, 1.08]
+  twist_deg:  [0.0, -2.5, -5.0, -7.5, -10.0, -12.5, -14.0]
+
+  # Airfoil zones: assign an airfoil name at each spanwise boundary.
+  # Between boundaries the aerodynamic coefficients are linearly blended.
+  # All names must appear in the 'airfoils' section below.
+  airfoil_zones:
+    - r:      0.19
+      airfoil: SC1095_CFD
+    - r:      0.75
+      airfoil: SC1095_CFD
+    - r:      1.00
+      airfoil: SC1095_CFD   # swap to a different airfoil at the tip if desired
+
+# ── Airfoil definitions ───────────────────────────────────────────────────────
+# Each airfoil name maps to one of three sources:
+#
+#   source: builtin    — bundled PRASADUM table from bemt/data/ (name = filename stem)
+#   source: c81        — load C81 file from c81_dir/ (or specify an explicit 'file:')
+#   source: agrc       — generate C81 via AGRC surrogate neural network
+#
+airfoils:
+  SC1095_CFD:
+    source: builtin        # uses bemt/data/SC1095_CFD.dat
+
+  # Example: tip airfoil from your own C81 directory
+  # SC1094R8:
+  #   source: c81          # looks for c81_dir/SC1094R8.dat or SC1094R8_C81.dat
+
+  # Example: generate C81 from an airfoil geometry file via AGRC surrogate
+  # MyAirfoil:
+  #   source: agrc
+  #   geometry: airfoils/my_airfoil_profile.dat
+
+# ── Global paths (required only for the sources you use) ─────────────────────
+
+# Directory containing *.dat C81 files (for source: c81)
+# c81_dir: ./my_c81_tables
+
+# Path to the agrc_surrogate directory (for source: agrc)
+# agrc_dir: ~/Downloads/AGRC-Surrogate/agrc_surrogate
+
+# ── Weight sweep ──────────────────────────────────────────────────────────────
+sweep:
+  weights_lb: [2200, 4000, 6000]

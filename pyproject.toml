@@ -1,0 +1,46 @@
+[build-system]
+requires = ["setuptools>=61", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "bemt-rotor"
+version = "0.1.0"
+description = "Blade Element Momentum Theory solver for hovering helicopter rotors"
+readme = "README.md"
+license = { file = "LICENSE" }
+requires-python = ">=3.10"
+keywords = ["helicopter", "rotor", "BEMT", "aerodynamics", "CFD"]
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: MIT License",
+    "Topic :: Scientific/Engineering :: Physics",
+    "Intended Audience :: Science/Research",
+]
+dependencies = [
+    "numpy>=1.24",
+    "scipy>=1.10",
+    "pyyaml>=6.0",
+]
+
+[project.optional-dependencies]
+# Required only for the AGRC_Surrogate pipeline (pipeline.py)
+agrc = [
+    "tensorflow>=2.16",
+    "keras>=3.0",
+    "joblib>=1.2",
+    "scikit-learn>=1.0",
+    "pandas>=1.5",
+]
+dev = [
+    "pytest>=7.0",
+]
+
+[project.scripts]
+bemt = "main:main"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["bemt*"]
+
+[tool.setuptools.package-data]
+bemt = ["data/*.dat"]
