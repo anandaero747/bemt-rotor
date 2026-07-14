@@ -329,7 +329,7 @@ def airfoil_to_bemt(
         twist_deg  = bk.get("twist_deg",  list(np.linspace(0.0, -14.0, N))),
     )
 
-    az     = AirfoilZoneConfig(airfoil_indices=[1, 1],
+    az     = AirfoilZoneConfig(airfoil_ids=["agrc_table", "agrc_table"],
                                r_boundaries=[ROOT, 1.0])
     solver = BEMTSolver(rotor, atmo, blade, az, [table, table])
 
