@@ -1,4 +1,4 @@
-"""Spanwise inflow computation using Prandtl tip-loss and table-lookup iteration."""
+#Spanwise inflow computation using Prandtl tip-loss and table-lookup iteration.
 from __future__ import annotations
 
 import numpy as np
@@ -20,22 +20,7 @@ def compute_inflow(
     rotor: RotorConfig,
     warn_negative_lift: bool = False,
 ) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray, bool]:
-    """Compute converged spanwise inflow ratio distribution.
 
-    Two-phase approach:
-      1. Linear inflow (thin-airfoil Cl_alpha) with Prandtl tip loss — fast
-         initial guess.
-      2. Table-lookup iteration with relaxation until the momentum and blade-
-         element inflow estimates agree.
-
-    Returns
-    -------
-    lam      : inflow ratio,   shape (n_seg,)
-    theta    : local pitch,    shape (n_seg,)  [theta_0 + twist]
-    F        : tip-loss factor, shape (n_seg,)
-    cl, cd, cm : aerodynamic coefficients, each shape (n_seg,)
-    lambda_fail : True if the table-lookup loop did not converge
-    """
     theta = theta_0 + twist
     lam = np.full(len(r), np.sqrt(max(CT_req, 0.0) / 2.0))
 
@@ -80,7 +65,6 @@ def _prandtl_tip_loss(
     n_blades: int,
     use_tip_loss: bool,
 ) -> np.ndarray:
-    """Compute Prandtl tip-loss factor F at each spanwise station."""
     if not use_tip_loss:
         return np.ones_like(r)
     phi = np.real(lam / r)

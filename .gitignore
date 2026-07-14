@@ -34,6 +34,9 @@ htmlcov/
 .ipynb_checkpoints/
 *.ipynb
 
+# Generated output files
+*.out
+
 # Large model/data files (AGRC_Surrogate assets — keep out of this repo)
 *.h5
 *.pkl

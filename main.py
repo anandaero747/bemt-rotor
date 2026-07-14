@@ -1,19 +1,4 @@
-"""Entry point: configure, sweep, and print BEMT results.
-
-Usage
------
-# Run with a YAML config file (recommended):
-    python main.py --input examples/example_config.yaml
-
-# Run the built-in UH-60 baseline with bundled SC1095 tables:
-    python main.py
-
-# Use a custom C81 table directly:
-    python main.py --c81 path/to/your_airfoil_C81.dat --weights 2200 4000
-
-# Override target weights on any run:
-    python main.py --input my_config.yaml --weights 2200 4000 6000
-"""
+#Entry point: configure, sweep, and print BEMT results.
 from __future__ import annotations
 
 import argparse
@@ -40,7 +25,6 @@ from bemt.solver import BEMTSolver
 
 def uh60_config() -> tuple[AtmosphericConfig, RotorConfig, BladeGeometry,
                             AirfoilZoneConfig, WeightSweepConfig]:
-    """UH-60 Black Hawk baseline hovering configuration."""
     N, ROOT = 40, 0.19
     atmo  = AtmosphericConfig(altitude=0.0, T_today=59.0)
     rotor = RotorConfig(radius=16.4, n_blades=3, n_rotors=1,
@@ -69,7 +53,6 @@ def run_sweep(
     airfoil_tables: list[AirfoilTable],
     weights_lb: list[float] | None = None,
 ) -> list[BEMTResult]:
-    """Run one BEMT solve per target weight."""
     solver = BEMTSolver(rotor, atmo, blade, az, airfoil_tables)
     target = weights_lb if weights_lb is not None else sweep.target_weights_lb
 
@@ -94,13 +77,6 @@ def build_airfoil_tables(
     agrc_dir: Path | None = None,
     c81_path: Path | None = None,
 ) -> list[AirfoilTable]:
-    """Resolve airfoil zone IDs to AirfoilTable objects.
-
-    Priority order:
-    1. ``c81_path`` — single C81 file applied to every zone (quick override)
-    2. ``airfoil_defs`` — per-airfoil source definitions (from YAML)
-    3. Fallback — treat each airfoil_id as a bundled PRASADUM table name
-    """
     if c81_path is not None:
         table = AirfoilTable.from_c81(c81_path)
         return [table] * len(az.airfoil_ids)
@@ -111,7 +87,7 @@ def build_airfoil_tables(
                                    agrc_dir=agrc_dir)
         return resolver.resolve_zone(az.airfoil_ids)
 
-    # Fallback: treat IDs as bundled PRASADUM table names
+    # Fallback: treat IDs as bundled C81 table names
     db = AirfoilDatabase()
     tables_map = db.load_names(az.airfoil_ids)
     return [tables_map[name] for name in az.airfoil_ids]
@@ -145,9 +121,11 @@ def main() -> list[BEMTResult]:
 
     t0 = time.perf_counter()
 
+    output_path = None
+
     if args.input is not None:
         from bemt.io import load_config
-        atmo, rotor, blade, az, sweep, airfoil_defs, c81_dir, agrc_dir = \
+        atmo, rotor, blade, az, sweep, airfoil_defs, c81_dir, agrc_dir, output_path = \
             load_config(args.input)
         airfoil_tables = build_airfoil_tables(
             az,
@@ -161,10 +139,16 @@ def main() -> list[BEMTResult]:
         airfoil_tables = build_airfoil_tables(az, c81_path=args.c81)
 
     _print_header()
+    target = args.weights if args.weights is not None else sweep.target_weights_lb
     results = run_sweep(atmo, rotor, blade, az, sweep,
                         airfoil_tables, weights_lb=args.weights)
 
     print(f"\nCompleted {len(results)} case(s) in {time.perf_counter() - t0:.3f} s")
+
+    if output_path is not None:
+        from bemt.writer import write_output
+        write_output(results, target, rotor, atmo, output_path, input_file=args.input)
+
     return results
 
 

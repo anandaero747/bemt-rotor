@@ -4,9 +4,9 @@ Requirements (beyond numpy/scipy):
     pip install bemt-rotor[agrc]
     # or: pip install tensorflow keras joblib scikit-learn pandas
 
-The AGRC_Surrogate models must be downloaded separately:
-    https://github.com/your-org/AGRC-Surrogate
-    (clone to a local directory and pass its path with --agrc-dir)
+The AGRC_Surrogate models must be cloned separately:
+    git clone https://github.com/anandaero747/AGRC-Surrogate
+    Then pass the path to the agrc_surrogate/ subdirectory with --agrc-dir.
 
 Run from the repo root:
     python examples/03_agrc_pipeline.py  \\

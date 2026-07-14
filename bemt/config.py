@@ -1,4 +1,4 @@
-"""Configuration dataclasses for rotor, atmosphere, blade geometry, airfoil zones, and sweep."""
+#Configuration dataclasses for rotor, atmosphere, blade geometry, airfoil zones, and sweep.
 import math
 from dataclasses import dataclass, field
 from typing import List
@@ -24,13 +24,12 @@ class AtmosphericConfig:
 
 @dataclass
 class RotorConfig:
-    """Physical geometry and operating parameters for a single rotor."""
-
     radius: float = 16.4           # ft
     n_blades: int = 3
     n_rotors: int = 1
     root_cutout: float = 0.19      # r/R
-    tip_speed: float = 550.0       # ft/s
+    tip_speed: float = 550.0       # ft/s — ignored when rpm is given
+    rpm: float | None = None       # if set, tip_speed = rpm * radius * pi / 30
     tip_loss: bool = True          # Prandtl tip-loss correction
 
     # Derived quantities — set in __post_init__
@@ -38,25 +37,14 @@ class RotorConfig:
     n_segments: int = field(init=False)   # number of spanwise blade elements
 
     def __post_init__(self) -> None:
+        if self.rpm is not None:
+            self.tip_speed = self.rpm * self.radius * math.pi / 30.0
         self.disk_area = math.pi * self.radius**2
         self.n_segments = int((1.0 - self.root_cutout) * 100)
 
 
 @dataclass
 class BladeGeometry:
-    """Spanwise blade geometry defined at arbitrary r/R stations.
-
-    All three arrays must have the same length (typically 40) and must span
-    from the root cutout to the tip (r/R = 1.0).  The solver interpolates
-    these onto its internal BEMT grid.
-
-    Parameters
-    ----------
-    r_stations : r/R locations, must be monotonically increasing
-    chord_ft   : local chord at each station, ft
-    twist_deg  : local twist angle at each station, degrees
-                 (negative = nose-down, as is conventional)
-    """
 
     r_stations: List[float]
     chord_ft:   List[float]
@@ -80,13 +68,6 @@ class BladeGeometry:
 
 @dataclass
 class AirfoilZoneConfig:
-    """Associates spanwise radial boundaries with named airfoil tables.
-
-    airfoil_ids[i] is the airfoil name at boundary r_boundaries[i].
-    Between consecutive boundaries the aerodynamic coefficients are linearly
-    blended.  Names must match keys in the airfoil definitions passed to the
-    resolver (see bemt.airfoil.AirfoilResolver).
-    """
 
     airfoil_ids: List[str] = field(default_factory=lambda: ["SC1095_CFD", "SC1095_CFD"])
     r_boundaries: List[float] = field(default_factory=lambda: [0.19, 1.0])

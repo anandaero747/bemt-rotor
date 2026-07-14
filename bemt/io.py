@@ -18,19 +18,11 @@ def load_config(path: str | Path) -> tuple[
     BladeGeometry,
     AirfoilZoneConfig,
     WeightSweepConfig,
-    dict,      # airfoil definitions (name → {source, ...})
-    Path | None,  # c81_dir
-    Path | None,  # agrc_dir
+    dict,           # airfoil definitions (name → {source, ...})
+    Path | None,    # c81_dir
+    Path | None,    # agrc_dir
+    Path | None,    # output file path
 ]:
-    """Load a BEMT run configuration from a YAML file.
-
-    All relative paths inside the YAML are resolved relative to the
-    directory that contains the YAML file itself.
-
-    Returns
-    -------
-    atmo, rotor, blade, airfoil_zone, sweep, airfoil_defs, c81_dir, agrc_dir
-    """
     try:
         import yaml
     except ImportError as exc:
@@ -48,12 +40,13 @@ def load_config(path: str | Path) -> tuple[
     # ── Rotor ────────────────────────────────────────────────────────────────
     r = cfg["rotor"]
     rotor = RotorConfig(
-        radius     = r["radius_ft"],
-        n_blades   = r["n_blades"],
-        n_rotors   = r.get("n_rotors", 1),
-        root_cutout= r["root_cutout"],
-        tip_speed  = r["tip_speed_fps"],
-        tip_loss   = r.get("tip_loss", True),
+        radius      = r["radius_ft"],
+        n_blades    = r["n_blades"],
+        n_rotors    = r.get("n_rotors", 1),
+        root_cutout = r.get("root_cutout", cfg["blade"]["r_stations"][0]),
+        rpm         = r.get("rpm"),
+        tip_speed   = r.get("tip_speed_fps", 550.0),
+        tip_loss    = r.get("tip_loss", True),
     )
 
     # ── Atmosphere ───────────────────────────────────────────────────────────
@@ -71,12 +64,51 @@ def load_config(path: str | Path) -> tuple[
         twist_deg  = b["twist_deg"],
     )
 
-    # ── Airfoil zones ─────────────────────────────────────────────────────────
-    zones = b["airfoil_zones"]
-    airfoil_zone = AirfoilZoneConfig(
-        airfoil_ids  = [z["airfoil"] for z in zones],
-        r_boundaries = [z["r"]       for z in zones],
-    )
+    # ── Airfoil zones — two supported formats ─────────────────────────────────
+    #
+    #  Format A (airfoil_geometry): per-station coordinate files → AGRC surrogate
+    #    airfoil_geometry:
+    #      - r: 0.19
+    #        file: airfoils/root.dat
+    #      - r: 1.00
+    #        file: airfoils/tip.dat
+    #
+    #  Format B (airfoil_zones): named airfoils resolved via the airfoils: block
+    #    airfoil_zones:
+    #      - r: 0.19
+    #        airfoil: SC1095_CFD
+    #
+    airfoil_defs: dict[str, dict] = {}
+
+    if "airfoil_geometry" in b:
+        geom_list = b["airfoil_geometry"]
+        airfoil_ids, r_boundaries = [], []
+        for entry in geom_list:
+            geom_path = (base / entry["file"]).resolve()
+            name = geom_path.stem
+            airfoil_ids.append(name)
+            r_boundaries.append(float(entry["r"]))
+            airfoil_defs[name] = {
+                "source": "agrc",
+                "geometry": str(geom_path),
+            }
+        airfoil_zone = AirfoilZoneConfig(
+            airfoil_ids=airfoil_ids,
+            r_boundaries=r_boundaries,
+        )
+
+    elif "airfoil_zones" in b:
+        zones = b["airfoil_zones"]
+        airfoil_zone = AirfoilZoneConfig(
+            airfoil_ids  = [z["airfoil"] for z in zones],
+            r_boundaries = [z["r"]       for z in zones],
+        )
+
+    else:
+        raise KeyError(
+            "blade section must contain either 'airfoil_geometry' "
+            "(coordinate files for AGRC) or 'airfoil_zones' (named airfoils)."
+        )
 
     # ── Sweep ────────────────────────────────────────────────────────────────
     s = cfg.get("sweep", {})
@@ -84,14 +116,12 @@ def load_config(path: str | Path) -> tuple[
         target_weights_lb = s.get("weights_lb", [2200.0])
     )
 
-    # ── Airfoil definitions (resolve geometry/file paths relative to YAML) ──
-    airfoil_defs: dict[str, dict] = {}
+    # ── Airfoil definitions from airfoils: block ──────────────────────────────
     for name, defn in cfg.get("airfoils", {}).items():
         defn = dict(defn)
         if "file" in defn:
             defn["file"] = str((base / defn["file"]).resolve())
         if "geometry" in defn:
-            # Attach base dir so AirfoilResolver can resolve relative geometry
             defn["geometry"] = str((base / defn["geometry"]).resolve())
         airfoil_defs[name] = defn
 
@@ -104,4 +134,9 @@ def load_config(path: str | Path) -> tuple[
     if "agrc_dir" in cfg:
         agrc_dir = Path(cfg["agrc_dir"]).expanduser().resolve()
 
-    return atmo, rotor, blade, airfoil_zone, sweep, airfoil_defs, c81_dir, agrc_dir
+    # ── Output file ──────────────────────────────────────────────────────────
+    output_path = None
+    if "output" in cfg:
+        output_path = (base / cfg["output"]).resolve()
+
+    return atmo, rotor, blade, airfoil_zone, sweep, airfoil_defs, c81_dir, agrc_dir, output_path

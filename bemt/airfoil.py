@@ -1,4 +1,4 @@
-"""Airfoil coefficient tables: parsing, storage, database, and resolver."""
+"""Airfoil table"""
 from __future__ import annotations
 
 from dataclasses import dataclass
@@ -7,10 +7,10 @@ from typing import Dict
 
 import numpy as np
 
-# Default directory for bundled PRASADUM-format airfoil tables.
+# Default directory for user specified airfoil tables.
 _DATA_DIR = Path(__file__).parent / "data"
 
-# Bundled airfoil names (filename stems in bemt/data/).
+# Bundled airfoil names (filename stems in bemt/data/). Existing airfoil tables
 BUNDLED_AIRFOILS = [
     "SC1095_CFD",
     "SC1095_base",
@@ -29,15 +29,8 @@ BUNDLED_AIRFOILS = [
 
 @dataclass
 class AirfoilTable:
-    """Cl, Cd, Cm tables for one airfoil indexed by Mach and angle of attack.
+    #Cl, Cd, Cm tables for one airfoil indexed by Mach and angle of attack.
 
-    Data file format (PRASADUM-style):
-        Line 1  : description header (skipped)
-        Line 2  : "nMach nAoA ..."
-        Lines 3–5 : separator / "-- Lift coefficient" / separator
-        nMach × nAoA rows : "Mach  AoA_deg  Cl"
-        (same pattern for Cd, then Cm)
-    """
 
     mach_vals: np.ndarray   # shape (n_mach,)
     alpha_vals: np.ndarray  # shape (n_alpha,), degrees
@@ -55,7 +48,6 @@ class AirfoilTable:
 
     @classmethod
     def from_file(cls, filepath: Path) -> AirfoilTable:
-        """Parse a PRASADUM-style airfoil coefficient file."""
         with open(filepath, "r") as fid:
             fid.readline()                          # skip description
             header = fid.readline().split()
@@ -147,55 +139,24 @@ class AirfoilTable:
 
 
 class AirfoilDatabase:
-    """Loads and caches AirfoilTable objects from a directory by name.
 
-    Parameters
-    ----------
-    airfoil_dir : directory containing PRASADUM-format .dat files.
-                  Defaults to the bundled ``bemt/data/`` directory.
-    """
 
     def __init__(self, airfoil_dir: Path = _DATA_DIR) -> None:
         self._dir = Path(airfoil_dir)
         self._cache: Dict[str, AirfoilTable] = {}
 
     def get(self, name: str) -> AirfoilTable:
-        """Return the AirfoilTable for ``name`` (filename stem, no .dat)."""
         if name not in self._cache:
             self._cache[name] = AirfoilTable.from_file(self._dir / f"{name}.dat")
         return self._cache[name]
 
     def load_names(self, names: list[str]) -> Dict[str, AirfoilTable]:
-        """Pre-load all requested names and return a mapping."""
         for name in set(names):
             self.get(name)
         return {name: self._cache[name] for name in set(names)}
 
 
 class AirfoilResolver:
-    """Resolves airfoil names to AirfoilTable objects.
-
-    Each airfoil is defined by a dict with a ``source`` key:
-
-    .. code-block:: yaml
-
-        SC1095:
-          source: agrc          # generate via AGRC surrogate
-          geometry: SC1095.dat  # airfoil coordinate file
-
-        SC1094R8:
-          source: c81           # load pre-computed C81 from c81_dir/
-          # file: override.dat  # optional: explicit path instead of c81_dir
-
-        SC1095_CFD:
-          source: builtin       # bundled PRASADUM table in bemt/data/
-
-    Parameters
-    ----------
-    definitions : mapping of airfoil name → definition dict
-    c81_dir     : directory searched for ``{name}.dat`` when source is "c81"
-    agrc_dir    : path to ``agrc_surrogate/`` when source is "agrc"
-    """
 
     def __init__(
         self,
@@ -210,13 +171,11 @@ class AirfoilResolver:
         self._agrc = None   # lazy-loaded on first AGRC request
 
     def resolve(self, name: str) -> AirfoilTable:
-        """Return the AirfoilTable for ``name``, loading if necessary."""
         if name not in self._cache:
             self._cache[name] = self._load(name)
         return self._cache[name]
 
     def resolve_zone(self, airfoil_ids: list[str]) -> list[AirfoilTable]:
-        """Return one AirfoilTable per zone boundary (same order as airfoil_ids)."""
         return [self.resolve(name) for name in airfoil_ids]
 
     # ------------------------------------------------------------------

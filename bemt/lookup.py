@@ -1,4 +1,4 @@
-"""Spanwise airfoil coefficient lookup via 2-D (Mach, AoA) interpolation."""
+#Spanwise airfoil coefficient lookup via 2-D (Mach, AoA) interpolation.
 from __future__ import annotations
 
 import numpy as np
@@ -16,25 +16,6 @@ def lookup_coefficients(
     r_boundaries: list[float],
     warn_negative_lift: bool = False,
 ) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
-    """Interpolate Cl, Cd, Cm at each spanwise blade section.
-
-    For each zone boundary the coefficients are looked up via bilinear
-    interpolation in (Mach, AoA) space.  Adjacent zones are linearly blended
-    across the span.
-
-    Parameters
-    ----------
-    r:               non-dimensional radial stations, shape (n_seg,)
-    theta:           local pitch angle, radians, shape (n_seg,)
-    mach_r:          local Mach number, shape (n_seg,)
-    lam:             inflow ratio, shape (n_seg,)
-    airfoil_tables:  list of AirfoilTable, one per zone boundary
-    r_boundaries:    radial boundaries matching airfoil_tables
-
-    Returns
-    -------
-    cl, cd, cm : each shape (n_seg,)
-    """
     phi = lam / r
     alpha_deg = np.rad2deg(theta - phi)
 
@@ -101,7 +82,6 @@ def _interp2d(
 
 
 def _zone_index(r_val: float, boundaries: list[float]) -> int:
-    """Return the left zone index such that boundaries[ind] <= r_val <= boundaries[ind+1]."""
     for j in range(len(boundaries) - 1):
         if boundaries[j] <= r_val <= boundaries[j + 1]:
             return j

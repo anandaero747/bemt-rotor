@@ -8,6 +8,7 @@ Usage
 from pipeline import load_agrc_models, airfoil_to_bemt
 
 agrc = load_agrc_models("/path/to/AGRC-Surrogate/agrc_surrogate")
+# Clone the surrogate repo from: https://github.com/anandaero747/AGRC-Surrogate
 results = airfoil_to_bemt("my_airfoil.dat", agrc, weights_lb=[2200, 4000])
 
 CLI

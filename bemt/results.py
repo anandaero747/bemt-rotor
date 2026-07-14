@@ -1,5 +1,7 @@
 """Output data structure for a single BEMT solve."""
-from dataclasses import dataclass
+from dataclasses import dataclass, field
+
+import numpy as np
 
 
 @dataclass
@@ -20,6 +22,15 @@ class BEMTResult:
     vtip: float             # tip speed, ft/s
     bisection_fail: bool    # collective bisection did not converge
     lambda_fail: bool       # inflow iteration did not converge
+
+    # Spanwise arrays — one value per blade element (length = n_segments)
+    r_span: np.ndarray = field(default_factory=lambda: np.array([]))
+    alpha_span_deg: np.ndarray = field(default_factory=lambda: np.array([]))
+    cl_span: np.ndarray = field(default_factory=lambda: np.array([]))
+    cd_span: np.ndarray = field(default_factory=lambda: np.array([]))
+    dCT_span: np.ndarray = field(default_factory=lambda: np.array([]))
+    dCPi_span: np.ndarray = field(default_factory=lambda: np.array([]))
+    dCP0_span: np.ndarray = field(default_factory=lambda: np.array([]))
 
     def __str__(self) -> str:
         return (

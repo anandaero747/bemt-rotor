@@ -1,4 +1,4 @@
-"""BEMTSolver: bisection-based collective trim and performance integration."""
+#BEMTSolver: bisection-based collective trim
 from __future__ import annotations
 
 import numpy as np
@@ -11,14 +11,6 @@ from .results import BEMTResult
 
 class BEMTSolver:
     """Blade Element Momentum Theory solver for a hovering rotor.
-
-    Chord and twist are supplied as explicit spanwise arrays via BladeGeometry
-    and interpolated onto the internal BEMT grid.
-
-    Usage
-    -----
-    solver = BEMTSolver(rotor, atmo, blade_geom, airfoil_zone, airfoil_tables)
-    result = solver.solve(CT_req=0.005)
     """
 
     def __init__(
@@ -164,4 +156,11 @@ class BEMTSolver:
             vtip=vtip,
             bisection_fail=bisection_fail,
             lambda_fail=lambda_fail,
+            r_span=r.copy(),
+            alpha_span_deg=np.rad2deg(alpha),
+            cl_span=cl.copy(),
+            cd_span=cd.copy(),
+            dCT_span=CT_arr.copy(),
+            dCPi_span=CPi_arr.copy(),
+            dCP0_span=CP0_arr.copy(),
         )
